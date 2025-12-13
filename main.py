@@ -1,7 +1,7 @@
 import pygame, sys
 from settings import *
 from level import Level
-class Game:
+class Game: 
     def __init__(self):
         pygame.init()
         self.screen = pygame.display.set_mode((width, height))
@@ -16,7 +16,7 @@ class Game:
                     pygame.quit()
                     sys.exit()
 
-            self.screen.fill((0, 0, 0))  # Clear screen with black
+            self.screen.fill((0, 0, 0))
             self.level.run()
             pygame.display.flip()
             self.clock.tick(fps)
