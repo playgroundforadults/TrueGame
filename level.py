@@ -24,7 +24,8 @@ class Level:
             'object': import_csv_layout('map/map_Objects.csv')
         }
         graphics = {
-            'grass': import_folder('graphics/Grass')
+            'grass': import_folder('graphics/Grass'),
+            'object': import_folder('graphics/Objects')
         }
         
         # iterate each layous, and create Tiles where the CSV indicates a tile
@@ -39,12 +40,9 @@ class Level:
                         random_grass_image = choice(graphics['grass'])
                         Tile((x, y), [self.visible_sprites, self.obstacle_sprites], 'grass', random_grass_image)
                     if style == 'object' and col != '-1':
-                        # placeholder: create objects based on CSV if needed; currently not implemented
-                        pass
+                        object_image = graphics['object'][int(col)]
+                        Tile((x, y), [self.visible_sprites, self.obstacle_sprites], 'object', object_image)
                     
-       #        if col == 'x':
-       #            Tile((x, y), [self.visible_sprites, self.obstacle_sprites], 'obstacle')
-       #        if col == 'p':
         self.player = Player((2000, 1500), [self.visible_sprites], self.obstacle_sprites)
 
     def run(self):

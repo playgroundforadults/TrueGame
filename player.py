@@ -1,5 +1,6 @@
 import pygame
 from settings import *
+from support import import_folder
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos, groups, obstacle_sprites):
@@ -16,9 +17,31 @@ class Player(pygame.sprite.Sprite):
         self.hitbox.centerx = self.rect.centerx
         self.hitbox.bottom = self.rect.bottom
 
+        self.import_player_assets()
+        self.status = 'down'
+        
+
         self.direction = pygame.math.Vector2()
         self.speed = 5
+        self.attacking = False
+        self.attack_cooldown = 400
+        self.attack_time = None
+
         self.obstacle_sprites = obstacle_sprites
+    
+
+
+    def import_player_assets(self):
+        character_path = 'graphics/player/'
+        self.animations = {'up': [], 'down': [], 'left': [], 'right': [], 'right_idle': [], 'left_idle': [], 'up_idle': [], 'down_idle': [], 'right_attack': [], 'left_attack': [], 'up_attack': [], 'down_attack': []}
+        for animation in self.animations.keys():
+            full_path = character_path + animation
+            self.animations[animation] = import_folder(full_path)
+        
+    def get_status(self):
+        if self.direction.x == 0 and self.direction.y == 0:
+            self.status = self.status + '_idle'
+        
 
     def input(self):
         keys = pygame.key.get_pressed()
@@ -36,6 +59,16 @@ class Player(pygame.sprite.Sprite):
             self.direction.x = 1
         else:
             self.direction.x = 0
+
+        if keys[pygame.K_SPACE] and not self.attacking:
+            self.attacking = True
+            self.attack_time = pygame.time.get_ticks()
+            print("attack")
+        
+        if keys[pygame.K_LCTRL] and not self.attacking:
+            self.attacking = True
+            self.attack_time = pygame.time.get_ticks()
+            print("heavy attack")
 
     def move(self, speed):
         if self.direction.magnitude() != 0:
@@ -68,9 +101,14 @@ class Player(pygame.sprite.Sprite):
         # keep the visual rect aligned with the hitbox feet area
         self.rect.midbottom = self.hitbox.midbottom
 
-
+    def cooldowns(self):
+        current_time = pygame.time.get_ticks()
+        if self.attacking:
+            if current_time - self.attack_time >= self.attack_cooldown:
+                self.attacking = False
 
 
     def update(self):
         self.input()
+        self.cooldowns()
         self.move(self.speed)
