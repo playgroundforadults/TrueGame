@@ -4,6 +4,7 @@ from settings import *
 from tile import Tile
 from player import Player
 from support import *
+from random import choice
 
 class Level:
     def __init__(self):
@@ -19,7 +20,13 @@ class Level:
     def create_map(self):
         layouts = {
             'boundary': import_csv_layout('map/map_FloorBlocks.csv'),
+            'grass': import_csv_layout('map/map_Grass.csv'),
+            'object': import_csv_layout('map/map_Objects.csv')
         }
+        graphics = {
+            'grass': import_folder('graphics/Grass')
+        }
+        
         # iterate each layous, and create Tiles where the CSV indicates a tile
         for style, layout in layouts.items():
             for row_index, row in enumerate(layout):
@@ -28,7 +35,13 @@ class Level:
                     y = row_index * tile_size
                     if style == 'boundary' and col != '-1':
                         Tile((x, y), [self.visible_sprites, self.obstacle_sprites], 'invisible')
-
+                    if style == 'grass' and col != '-1':
+                        random_grass_image = choice(graphics['grass'])
+                        Tile((x, y), [self.visible_sprites, self.obstacle_sprites], 'grass', random_grass_image)
+                    if style == 'object' and col != '-1':
+                        # placeholder: create objects based on CSV if needed; currently not implemented
+                        pass
+                    
        #        if col == 'x':
        #            Tile((x, y), [self.visible_sprites, self.obstacle_sprites], 'obstacle')
        #        if col == 'p':

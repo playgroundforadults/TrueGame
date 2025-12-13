@@ -7,7 +7,6 @@ class Game:
         self.screen = pygame.display.set_mode((width, height))
         pygame.display.set_caption('True Game')
         self.clock = pygame.time.Clock()
-
         self.level = Level()
     def run(self):
         while True:
