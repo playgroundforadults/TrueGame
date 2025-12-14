@@ -25,3 +25,7 @@ weapons_data = {
     'sword': {'cooldown': 400, 'damage': 15, 'graphic': 'graphics/weapons/sword/full.png'},
     'axe': {'cooldown': 600, 'damage': 25, 'graphic': 'graphics/weapons/axe/full.png'}
 }
+magic_data = {
+    'flame': {'strength': 5, 'cost': 20, 'graphic': 'graphics/particles/flame/fire.png'},
+    'heal': {'strength': 20, 'cost': 10, 'graphic': 'graphics/particles/heal/heal.png'}
+}
