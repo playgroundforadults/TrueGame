@@ -29,6 +29,10 @@ class Enemy(Entity):
 
         # state for actions
         self.attacking = False
+        self.can_attack = True
+        self.attack_time = None
+        # attack cooldown (ms) - default will be overridden by monster_data if present
+        self.attack_cooldown = 1000
 
         self.monster_name = monster_name 
         monster_info = monster_data[self.monster_name] 
@@ -39,9 +43,36 @@ class Enemy(Entity):
         self.attack_radius = monster_info['attack_radius']
         self.notice_radius = monster_info['notice_radius']
         self.attack_type = monster_info['attack_type']
+        # per-monster cooldown override
+        if 'attack_cooldown' in monster_info:
+            self.attack_cooldown = monster_info['attack_cooldown']
     
         self.can_attack = True
     
+    def actions(self):
+        # called when evaluating what the enemy should do this frame
+        if self.status == 'attack' and self.can_attack:
+            # perform attack action once, then enter cooldown
+            print('attack')
+            self.can_attack = False
+            self.attack_time = pygame.time.get_ticks()
+            self.attacking = True
+        elif self.status == 'move':
+            # while moving, ensure not flagged as attacking
+            self.attacking = False
+        self.frame_index = 0
+
+    def cooldowns(self):
+        # handle resetting attack availability after cooldown
+        if not self.can_attack and self.attack_time is not None:
+            current_time = pygame.time.get_ticks()
+            if current_time - self.attack_time >= self.attack_cooldown:
+                self.can_attack = True
+                self.attacking = False
+                self.attack_time = None
+
+
+
     def import_graphics(self, name):
         self.animations = {'idle': [], 'move': [], 'attack': []}
         main_path = f'graphics/monsters/{name}/'
@@ -87,10 +118,14 @@ class Enemy(Entity):
         self.animate()
         if self.status == 'move':
             self.move(self.speed)
+        # run cooldowns to reset attack availability
+        self.cooldowns()
 
     def enemy_update(self, player):
         # high-level enemy logic called from camera group
         self.get_status(player)
+        # run actions (attack once when appropriate)
+        self.actions()
         # set movement direction when noticing player
         if self.status == 'move':
             # use direction toward player

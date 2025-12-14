@@ -39,7 +39,8 @@ monster_data = {
         'damage': 10,
         'attack_radius': 30,
         'notice_radius': 150,
-        'attack_type': 'melee'
+        'attack_type': 'melee',
+        'attack_cooldown': 1200
     },
     'spirit': {
         'health': 80,
@@ -48,7 +49,8 @@ monster_data = {
         'damage': 12,
         'attack_radius': 40,
         'notice_radius': 200,
-        'attack_type': 'ranged'
+        'attack_type': 'ranged',
+        'attack_cooldown': 900
     },
     'raccoon': {
         'health': 70,
@@ -57,7 +59,8 @@ monster_data = {
         'damage': 14,
         'attack_radius': 35,
         'notice_radius': 160,
-        'attack_type': 'melee'
+        'attack_type': 'melee',
+        'attack_cooldown': 1000
     },
     'squid': {
         'health': 90,
@@ -66,6 +69,7 @@ monster_data = {
         'damage': 18,
         'attack_radius': 45,
         'notice_radius': 180,
-        'attack_type': 'ranged'
+        'attack_type': 'ranged',
+        'attack_cooldown': 1400
     }
 }
