@@ -29,3 +29,43 @@ magic_data = {
     'flame': {'strength': 5, 'cost': 20, 'graphic': 'graphics/particles/flame/fire.png'},
     'heal': {'strength': 20, 'cost': 10, 'graphic': 'graphics/particles/heal/heal.png'}
 }
+
+# Monster configuration used by Enemy
+monster_data = {
+    'bamboo': {
+        'health': 50,
+        'exp': 50,
+        'speed': 2,
+        'damage': 10,
+        'attack_radius': 30,
+        'notice_radius': 150,
+        'attack_type': 'melee'
+    },
+    'spirit': {
+        'health': 80,
+        'exp': 80,
+        'speed': 3,
+        'damage': 12,
+        'attack_radius': 40,
+        'notice_radius': 200,
+        'attack_type': 'ranged'
+    },
+    'raccoon': {
+        'health': 70,
+        'exp': 70,
+        'speed': 3,
+        'damage': 14,
+        'attack_radius': 35,
+        'notice_radius': 160,
+        'attack_type': 'melee'
+    },
+    'squid': {
+        'health': 90,
+        'exp': 90,
+        'speed': 2,
+        'damage': 18,
+        'attack_radius': 45,
+        'notice_radius': 180,
+        'attack_type': 'ranged'
+    }
+}

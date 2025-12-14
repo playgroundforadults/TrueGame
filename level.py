@@ -61,9 +61,16 @@ class Level:
                                 self.destroy_attack, 
                                 self.create_magic)
                         else:
-                            # map other entity codes to monster types here if desired
-                            # default to a generic 'monster'
-                            Enemy('monster', (x, y), [self.visible_sprites])
+                            if col.strip() == '390':
+                                monster_name = 'bamboo'
+                            elif col.strip() == '391':
+                                monster_name = 'spirit'
+                            elif col.strip() == '392':
+                                monster_name = 'raccoon'
+                            else:
+                                monster_name = 'squid'
+                                                       
+                            Enemy(monster_name, (x, y), [self.visible_sprites], self.obstacle_sprites)
 
                     
         
@@ -83,6 +90,8 @@ class Level:
         # Update all sprites, then draw them using the camera offset
         self.visible_sprites.update()
         self.visible_sprites.custom_draw(self.player)
+        self.visible_sprites.enemy_update(self.player)
+
         self.ui.display(self.player)
 
 
@@ -114,3 +123,8 @@ class YSortCameraGroup(pygame.sprite.Group):
         for sprite in sorted(self.sprites(), key=sort_key):
             offset_pos = sprite.rect.topleft - self.offset
             self.display_surface.blit(sprite.image, offset_pos)
+
+    def enemy_update(self, player):
+        enemy_sprites = [sprite for sprite in self.sprites() if hasattr(sprite, 'sprite_type') and sprite.sprite_type == 'enemy']
+        for enemy in enemy_sprites:
+            enemy.enemy_update(player)
