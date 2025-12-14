@@ -1,8 +1,9 @@
 import pygame
 from settings import *
 from support import import_folder
+from entity import Entity
 
-class Player(pygame.sprite.Sprite):
+class Player(Entity):
     def __init__(self, pos, groups, obstacle_sprites, create_attack, destroy_attack, create_magic):
         super().__init__(*groups)
         self.image = pygame.image.load('images/player.png').convert_alpha()
@@ -17,23 +18,25 @@ class Player(pygame.sprite.Sprite):
         self.hitbox.centerx = self.rect.centerx
         self.hitbox.bottom = self.rect.bottom
 
+
+        #player visual stuff
         self.import_player_assets()
         self.status = 'down'
-        self.frame_index = 0
-        self.animation_speed = 0.15
-        
-
+                
+        #the stuff that makes these goofy pixels move
         self.direction = pygame.math.Vector2()
         self.attacking = False
         self.attack_cooldown = 400
         self.attack_time = None
         self.obstacle_sprites = obstacle_sprites
 
+        #weapon
         self.create_attack = create_attack
         self.destroy_attack = destroy_attack
         self.weapon_index = 1
         self.weapon = list(weapons_data.keys())[self.weapon_index]
 
+        #we love casting spells
         self.create_magic = create_magic
         self.magic_index = 0
         self.magic = list(magic_data.keys())[self.magic_index]
@@ -133,36 +136,6 @@ class Player(pygame.sprite.Sprite):
                 pygame.time.delay(200)  # simple debounce to prevent rapid switching
      
 
-    def move(self, speed):
-        if self.direction.magnitude() != 0:
-            self.direction = self.direction.normalize()
-        dx = self.direction.x * speed
-        dy = self.direction.y * speed
-
-        # Horizontal movement using hitbox for collisions
-        self.pos.x += dx
-        self.hitbox.x = round(self.pos.x)
-        for sprite in self.obstacle_sprites:
-            if sprite.rect.colliderect(self.hitbox):
-                if dx > 0:  # moving right
-                    self.hitbox.right = sprite.rect.left
-                if dx < 0:  # moving left
-                    self.hitbox.left = sprite.rect.right
-                self.pos.x = self.hitbox.x
-
-        # Vertical movement using hitbox for collisions
-        self.pos.y += dy
-        self.hitbox.y = round(self.pos.y)
-        for sprite in self.obstacle_sprites:
-            if sprite.rect.colliderect(self.hitbox):
-                if dy > 0:  # moving down
-                    self.hitbox.bottom = sprite.rect.top
-                if dy < 0:  # moving up
-                    self.hitbox.top = sprite.rect.bottom
-                self.pos.y = self.hitbox.y
-
-        # keep the visual rect aligned with the hitbox feet area
-        self.rect.midbottom = self.hitbox.midbottom
 
     def cooldowns(self):
         current_time = pygame.time.get_ticks()
