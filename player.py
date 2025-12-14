@@ -3,7 +3,7 @@ from settings import *
 from support import import_folder
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, groups, obstacle_sprites):
+    def __init__(self, pos, groups, obstacle_sprites, create_attack, destroy_attack):
         super().__init__(*groups)
         self.image = pygame.image.load('images/player.png').convert_alpha()
         self.rect = self.image.get_rect(topleft=pos)
@@ -24,13 +24,21 @@ class Player(pygame.sprite.Sprite):
         
 
         self.direction = pygame.math.Vector2()
-        self.speed = 5
         self.attacking = False
         self.attack_cooldown = 400
         self.attack_time = None
-
         self.obstacle_sprites = obstacle_sprites
-    
+
+        self.create_attack = create_attack
+        self.destroy_attack = destroy_attack
+        self.weapon_index = 1
+        self.weapon = list(weapons_data.keys())[self.weapon_index]
+
+        self.stats = {'health': 100, 'energy': 60, 'attack': 10, 'magic': 4, 'speed': 6}
+        self.health = self.stats['health']
+        self.energy = self.stats['energy']
+        self.exp = 123
+        self.speed = self.stats['speed']
 
 
     def import_player_assets(self):
@@ -70,35 +78,43 @@ class Player(pygame.sprite.Sprite):
         
 
     def input(self):
-        keys = pygame.key.get_pressed()
+        if not self.attacking:
+            keys = pygame.key.get_pressed()
 
-        if keys[pygame.K_w]:
-            self.direction.y = -1
-            self.status = 'up'
-        elif keys[pygame.K_s]:
-            self.direction.y = 1
-            self.status = 'down'
-        else:
-            self.direction.y = 0
+            if keys[pygame.K_w]:
+                self.direction.y = -1
+                self.status = 'up'
+            elif keys[pygame.K_s]:
+                self.direction.y = 1
+                self.status = 'down'
+            else:
+                self.direction.y = 0
 
-        if keys[pygame.K_a]:
-            self.direction.x = -1
-            self.status = 'left'
-        elif keys[pygame.K_d]:
-            self.direction.x = 1
-            self.status = 'right'
-        else:
-            self.direction.x = 0
+            if keys[pygame.K_a]:
+                self.direction.x = -1
+                self.status = 'left'
+            elif keys[pygame.K_d]:
+                self.direction.x = 1
+                self.status = 'right'
+            else:
+                self.direction.x = 0
 
-        if keys[pygame.K_SPACE] and not self.attacking:
-            self.attacking = True
-            self.attack_time = pygame.time.get_ticks()
-            print("attack")
+            if keys[pygame.K_SPACE]:
+                self.attacking = True
+                self.attack_time = pygame.time.get_ticks()
+                self.create_attack()
         
-        if keys[pygame.K_LCTRL] and not self.attacking:
-            self.attacking = True
-            self.attack_time = pygame.time.get_ticks()
-            print("heavy attack")
+            if keys[pygame.K_LCTRL]:
+                self.attacking = True
+                self.attack_time = pygame.time.get_ticks()
+
+            if keys[pygame.K_q]:
+                self.weapon_index += 1
+                if self.weapon_index >= len(weapons_data):
+                    self.weapon_index = 0
+                self.weapon = list(weapons_data.keys())[self.weapon_index]
+                pygame.time.delay(200)  # simple debounce to prevent rapid switching
+     
 
     def move(self, speed):
         if self.direction.magnitude() != 0:
@@ -136,6 +152,7 @@ class Player(pygame.sprite.Sprite):
         if self.attacking:
             if current_time - self.attack_time >= self.attack_cooldown:
                 self.attacking = False
+                self.destroy_attack()
 
     def animate(self):
         animation = self.animations[self.status]
