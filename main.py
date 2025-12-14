@@ -16,7 +16,7 @@ class Game:
                     pygame.quit()
                     sys.exit()
 
-            self.screen.fill((0, 0, 0))
+            self.screen.fill(water_color)
             self.level.run()
             pygame.display.flip()
             self.clock.tick(fps)

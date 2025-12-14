@@ -9,7 +9,7 @@ class MagicPlayer:
         self.frames = {
             'flame': import_folder('graphics/particles/flame/frames'),
             'aura': import_folder('graphics/particles/aura'),
-            'heal': import_folder('graphics/particles/heal/frames')
+            'heal': import_folder('graphics/particles/heal/frames'),
         }
 
     def heal(self, player, strength, cost, groups):
@@ -49,9 +49,31 @@ class MagicPlayer:
 class AnimationPlayer:
     def __init__(self):
         self.frames = {
+            # Magic
             'flame': import_folder('graphics/particles/flame/frames'),
             'aura': import_folder('graphics/particles/aura'),
-            'heal': import_folder('graphics/particles/heal/frames')
+            'heal': import_folder('graphics/particles/heal/frames'),
+            
+            # Attacks
+            'leaf_attack': import_folder('graphics/particles/leaf_attack'),
+            'claw': import_folder('graphics/particles/claw'),
+            'slash': import_folder('graphics/particles/slash'),
+            'sparkle': import_folder('graphics/particles/sparkle'),
+            'thunder': import_folder('graphics/particles/thunder'),
+
+            # Monster deaths / smoke
+            'squid': import_folder('graphics/particles/smoke2'),
+            'raccoon': import_folder('graphics/particles/raccoon'),
+            'spirit': import_folder('graphics/particles/nova'),
+            'bamboo': import_folder('graphics/particles/bamboo'),
+            
+            # Grass Particles
+            'leaf1': import_folder('graphics/particles/leaf1'),
+            'leaf2': import_folder('graphics/particles/leaf2'),
+            'leaf3': import_folder('graphics/particles/leaf3'),
+            'leaf4': import_folder('graphics/particles/leaf4'),
+            'leaf5': import_folder('graphics/particles/leaf5'),
+            'leaf6': import_folder('graphics/particles/leaf6'),
         }
     
     def create_particles(self, animation_type, pos, groups):

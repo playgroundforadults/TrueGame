@@ -4,7 +4,7 @@ from settings import *
 from tile import Tile
 from player import Player
 from support import *
-from random import choice
+from random import choice, randint
 from weapon import Weapon
 from ui import UI
 from enemy import Enemy
@@ -17,7 +17,7 @@ class Level:
         # Groups
         self.visible_sprites = YSortCameraGroup()
         self.obstacle_sprites = pygame.sprite.Group()
-        self.attackable_sprites = pygame.sprite.Group() # Enemies
+        self.attackable_sprites = pygame.sprite.Group() # Enemies and Grass
         self.attack_sprites = pygame.sprite.Group()     # Weapon + Magic projectiles
 
         self.current_attack = None
@@ -52,7 +52,12 @@ class Level:
                         Tile((x, y), [self.visible_sprites, self.obstacle_sprites], 'invisible')
                     if style == 'grass' and col != '-1':
                         random_grass_image = choice(graphics['grass'])
-                        Tile((x, y), [self.visible_sprites, self.obstacle_sprites], 'grass', random_grass_image)
+                        # Grass is now added to attackable_sprites
+                        Tile(
+                            (x, y), 
+                            [self.visible_sprites, self.obstacle_sprites, self.attackable_sprites], 
+                            'grass', 
+                            random_grass_image)
                     if style == 'object' and col != '-1':
                         object_image = graphics['object'][int(col)]
                         Tile((x, y), [self.visible_sprites, self.obstacle_sprites], 'object', object_image)
@@ -99,20 +104,31 @@ class Level:
                 collision_sprites = pygame.sprite.spritecollide(attack_sprite, self.attackable_sprites, False)
                 if collision_sprites:
                     for target_sprite in collision_sprites:
-                        # Differentiate damage source
-                        if attack_sprite.sprite_type == 'weapon':
-                            target_sprite.get_damage(self.player, attack_sprite.sprite_type)
+                        if target_sprite.sprite_type == 'grass':
+                            pos = target_sprite.rect.center
+                            offset = pygame.math.Vector2(0, 75)
+                            # Spawn random leaf particles (leaf1 to leaf6)
+                            for _ in range(randint(3, 6)):
+                                self.animation_player.create_particles(f'leaf{randint(1, 6)}', pos - offset, [self.visible_sprites])
+                            target_sprite.kill()
                         else:
-                            # Magic particles logic
+                            # Enemy damage logic
                             target_sprite.get_damage(self.player, attack_sprite.sprite_type)
 
     def damage_player(self):
-        # Check collision between player and attackable sprites (Enemies)
+        # Check collision between player and attackable sprites
         if self.attackable_sprites:
-            collision_sprites = pygame.sprite.spritecollide(self.player, self.attackable_sprites, False)
+            # Filter enemies (ignore grass so walking on it doesn't hurt)
+            enemies = [sprite for sprite in self.attackable_sprites if sprite.sprite_type == 'enemy']
+            collision_sprites = pygame.sprite.spritecollide(self.player, enemies, False)
+            
             if collision_sprites:
                 for enemy in collision_sprites:
-                    self.player.get_damage(enemy.attack_damage)
+                    # Only play animation and take damage if player is vulnerable
+                    if self.player.vulnerable:
+                        self.player.get_damage(enemy.attack_damage)
+                        # Play the 'leaf_attack' animation when player gets hit
+                        self.animation_player.create_particles('leaf_attack', self.player.rect.center, [self.visible_sprites])
 
     def run(self):
         self.visible_sprites.update()
@@ -123,6 +139,11 @@ class Level:
         self.damage_player()
         
         self.ui.display(self.player)
+        
+        # Check for victory condition: No more enemies in the attackable group
+        enemies_left = [s for s in self.attackable_sprites if s.sprite_type == 'enemy']
+        if len(enemies_left) == 0:
+            self.ui.display_victory_message()
 
 
 class YSortCameraGroup(pygame.sprite.Group):

@@ -170,8 +170,11 @@ class Enemy(Entity):
         self.cooldowns()
         self.check_death()
         
-        # Only move if not stunned
-        if self.status == 'move' and not self.hit_stun:
+        # Allow movement if hit_stun is active (knockback) OR if status is move
+        if self.hit_stun:
+            # Move backwards (knockback) using normal speed
+            self.move(self.speed)
+        elif self.status == 'move':
             self.move(self.speed)
 
     def enemy_update(self, player):
@@ -179,11 +182,15 @@ class Enemy(Entity):
         self.get_status(player)
         # run actions (attack once when appropriate)
         self.actions()
-        # set movement direction when noticing player
-        if self.status == 'move':
+        
+        if self.hit_stun:
+            # Set direction AWAY from player for knockback
+            self.direction = -(self.get_player_distance_direction(player)[1])
+        elif self.status == 'move':
             # use direction toward player
             self.direction = self.get_player_distance_direction(player)[1]
         else:
             self.direction = pygame.math.Vector2()
+            
         # call the regular update (no args)
         self.update()
