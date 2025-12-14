@@ -11,7 +11,7 @@ class Player(Entity):
         
         # ok so this makes the position a vector for more precise movement
         self.pos = pygame.math.Vector2(self.rect.topleft)
-        # Hitbox used for collisions and sorting; anchored at player's feet
+        # create a hitbox smaller than the sprite rect for better collisions
         hit_w = int(self.rect.width * 0.5)
         hit_h = int(self.rect.height * 0.35)
         self.hitbox = pygame.Rect(0, 0, hit_w, hit_h)
@@ -43,11 +43,19 @@ class Player(Entity):
         self.can_switch_magic = True
         self.switch_magic_time = None
 
+        # stat
         self.stats = {'health': 100, 'energy': 60, 'attack': 10, 'magic': 4, 'speed': 6}
         self.health = self.stats['health']
         self.energy = self.stats['energy']
-        self.exp = 123
+        self.exp = 0
+        self.level = 1
+        self.exp_needed = 100
         self.speed = self.stats['speed']
+        
+        #i frames
+        self.vulnerable = True
+        self.hurt_time = None
+        self.invulnerability_duration = 500
 
 
     def import_player_assets(self):
@@ -58,28 +66,25 @@ class Player(Entity):
             self.animations[animation] = import_folder(full_path)
         
     def get_status(self):
-        # Normalize base direction (remove any suffixes)
         base = self.status
         if base.endswith('_idle'):
             base = base.replace('_idle', '')
         if base.endswith('_attack'):
             base = base.replace('_attack', '')
 
-        # If moving, update base facing direction
         if self.direction.x != 0 or self.direction.y != 0:
             if abs(self.direction.x) > 0:
                 base = 'left' if self.direction.x < 0 else 'right'
             elif abs(self.direction.y) > 0:
                 base = 'up' if self.direction.y < 0 else 'down'
 
-        # Lock out movement while attacking
+        # no moving while attacking
         if self.attacking:
             # ensure no movement while attacking
             self.direction.x = 0
             self.direction.y = 0
             self.status = f"{base}_attack"
         else:
-            # No attack: set either moving or idle status
             if self.direction.x != 0 or self.direction.y != 0:
                 self.status = base
             else:
@@ -135,7 +140,37 @@ class Player(Entity):
                 self.weapon = list(weapons_data.keys())[self.weapon_index]
                 pygame.time.delay(200)  # simple debounce to prevent rapid switching
      
+    def get_full_weapon_damage(self):
+        base_damage = self.stats['attack']
+        weapon_damage = weapons_data[self.weapon]['damage']
+        return base_damage + weapon_damage
+    
+    def check_death(self):
+        if self.health <= 0:
+            self.kill()
 
+    def get_damage(self, amount):
+        if self.vulnerable:
+            self.health -= amount
+            self.vulnerable = False
+            self.hurt_time = pygame.time.get_ticks()
+
+    def check_level_up(self):
+        if self.exp >= self.exp_needed:
+            self.exp -= self.exp_needed
+            self.level += 1
+            self.exp_needed = int(self.exp_needed * 1.1) + 50 # Increase requirement
+            
+            # stat boost when leveling
+            self.stats['health'] += 10
+            self.stats['energy'] += 5
+            self.stats['attack'] += 2
+            self.stats['magic'] += 1
+            
+            #health pack from leveling
+            self.health = self.stats['health']
+            self.energy = self.stats['energy']
+            print(f"Leveled up to {self.level}!")
 
     def cooldowns(self):
         current_time = pygame.time.get_ticks()
@@ -143,6 +178,10 @@ class Player(Entity):
             if current_time - self.attack_time >= self.attack_cooldown:
                 self.attacking = False
                 self.destroy_attack()
+        
+        if not self.vulnerable:
+            if current_time - self.hurt_time >= self.invulnerability_duration:
+                self.vulnerable = True
 
     def animate(self):
         animation = self.animations[self.status]
@@ -158,3 +197,5 @@ class Player(Entity):
         self.get_status()
         self.animate()
         self.move(self.speed)
+        self.check_level_up()
+        self.check_death()

@@ -8,20 +8,27 @@ from random import choice
 from weapon import Weapon
 from ui import UI
 from enemy import Enemy
+from magic import MagicPlayer, AnimationPlayer
 
 class Level:
     def __init__(self):
         self.display_surface = pygame.display.get_surface()
 
-        # Use a camera-aware group so we can render sprites relative to the player's position
+        # Groups
         self.visible_sprites = YSortCameraGroup()
         self.obstacle_sprites = pygame.sprite.Group()
+        self.attackable_sprites = pygame.sprite.Group() # Enemies
+        self.attack_sprites = pygame.sprite.Group()     # Weapon + Magic projectiles
 
         self.current_attack = None
 
         self.create_map()
 
         self.ui = UI()
+        
+        # Magic
+        self.animation_player = AnimationPlayer()
+        self.magic_player = MagicPlayer(self.animation_player)
 
     
     def create_map(self):
@@ -36,7 +43,6 @@ class Level:
             'object': import_folder('graphics/Objects')
         }
         
-        # iterate each layous, and create Tiles where the CSV indicates a tile
         for style, layout in layouts.items():
             for row_index, row in enumerate(layout):
                 for col_index, col in enumerate(row):
@@ -51,7 +57,6 @@ class Level:
                         object_image = graphics['object'][int(col)]
                         Tile((x, y), [self.visible_sprites, self.obstacle_sprites], 'object', object_image)
                     if style == 'entities' and col != '-1':
-                        # spawn player when CSV has the player code '394'
                         if col.strip() == '394':
                             self.player = Player(
                                 (x, y), 
@@ -61,37 +66,62 @@ class Level:
                                 self.destroy_attack, 
                                 self.create_magic)
                         else:
-                            if col.strip() == '390':
-                                monster_name = 'bamboo'
-                            elif col.strip() == '391':
-                                monster_name = 'spirit'
-                            elif col.strip() == '392':
-                                monster_name = 'raccoon'
-                            else:
-                                monster_name = 'squid'
-                                                       
-                            Enemy(monster_name, (x, y), [self.visible_sprites], self.obstacle_sprites)
-
-                    
-        
+                            if col.strip() == '390': monster_name = 'bamboo'
+                            elif col.strip() == '391': monster_name = 'spirit'
+                            elif col.strip() == '392': monster_name = 'raccoon'
+                            else: monster_name = 'squid'
+                            
+                            Enemy(monster_name, (x, y), [self.visible_sprites, self.attackable_sprites], self.obstacle_sprites, self.add_exp)
 
     def create_attack(self):
-        self.current_attack = Weapon(self.player, [self.visible_sprites])
+        # Pass attack_sprites to weapon so it can register itself for collision
+        self.current_attack = Weapon(self.player, [self.visible_sprites, self.attack_sprites])
 
     def create_magic(self, style, strength, cost):
-        pass
+        if style == 'heal':
+            self.magic_player.heal(self.player, strength, cost, [self.visible_sprites])
+        
+        if style == 'flame':
+            self.magic_player.flame(self.player, cost, [self.visible_sprites, self.attack_sprites])
 
     def destroy_attack(self):
         if self.current_attack:
             self.current_attack.kill()
         self.current_attack = None
 
+    def add_exp(self, amount):
+        self.player.exp += amount
+
+    def player_attack_logic(self):
+        # Cycle through all active attack sprites (Weapon or Magic)
+        if self.attack_sprites:
+            for attack_sprite in self.attack_sprites:
+                collision_sprites = pygame.sprite.spritecollide(attack_sprite, self.attackable_sprites, False)
+                if collision_sprites:
+                    for target_sprite in collision_sprites:
+                        # Differentiate damage source
+                        if attack_sprite.sprite_type == 'weapon':
+                            target_sprite.get_damage(self.player, attack_sprite.sprite_type)
+                        else:
+                            # Magic particles logic
+                            target_sprite.get_damage(self.player, attack_sprite.sprite_type)
+
+    def damage_player(self):
+        # Check collision between player and attackable sprites (Enemies)
+        if self.attackable_sprites:
+            collision_sprites = pygame.sprite.spritecollide(self.player, self.attackable_sprites, False)
+            if collision_sprites:
+                for enemy in collision_sprites:
+                    self.player.get_damage(enemy.attack_damage)
+
     def run(self):
-        # Update all sprites, then draw them using the camera offset
         self.visible_sprites.update()
         self.visible_sprites.custom_draw(self.player)
         self.visible_sprites.enemy_update(self.player)
-
+        
+        self.player_attack_logic()
+        self.damage_player()
+        
         self.ui.display(self.player)
 
 
@@ -103,7 +133,6 @@ class YSortCameraGroup(pygame.sprite.Group):
         self.half_height = self.display_surface.get_size()[1] // 2
         self.offset = pygame.math.Vector2()
 
-        #load the floor image
         self.floor_surface = pygame.image.load("graphics/tilemap/ground.png").convert()
         self.floor_rect = self.floor_surface.get_rect(topleft=(0, 0))
 
@@ -111,7 +140,7 @@ class YSortCameraGroup(pygame.sprite.Group):
     def custom_draw(self, player):
         self.offset.x = player.rect.centerx - self.half_width
         self.offset.y = player.rect.centery - self.half_height
-        # Sort by hitbox Y if available (player or entity foot position), otherwise fall back to rect.centery
+        
         def sort_key(sprite):
             if hasattr(sprite, 'hitbox'):
                 return sprite.hitbox.centery

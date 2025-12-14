@@ -4,12 +4,11 @@ from entity import Entity
 from support import import_folder
 
 class Enemy(Entity):
-    def __init__(self, monster_name, pos, groups, obstacle_sprites):
+    def __init__(self, monster_name, pos, groups, obstacle_sprites, add_exp):
         # initialize base class and register with any provided groups
         super().__init__(*groups)
         self.sprite_type = 'enemy'
 
-        
         self.import_graphics(monster_name)
         self.status = 'idle'
 
@@ -46,32 +45,72 @@ class Enemy(Entity):
         # per-monster cooldown override
         if 'attack_cooldown' in monster_info:
             self.attack_cooldown = monster_info['attack_cooldown']
-    
-        self.can_attack = True
+
+        # Player interaction logic
+        self.vulnerable = True
+        self.hit_time = None
+        self.invincibility_duration = 300
+        
+        # Hit stun logic
+        self.hit_stun = False
+        self.hit_stun_duration = 300
+        
+        # Function to grant EXP to player
+        self.add_exp = add_exp
     
     def actions(self):
+        # Prevent starting attacks if stunned
+        if self.hit_stun:
+            return
+
         # called when evaluating what the enemy should do this frame
-        if self.status == 'attack' and self.can_attack:
-            # perform attack action once, then enter cooldown
+        # Only start an attack if valid state, cooldown ready, and not currently attacking
+        if self.status == 'attack' and self.can_attack and not self.attacking:
             print('attack')
             self.can_attack = False
             self.attack_time = pygame.time.get_ticks()
             self.attacking = True
-        elif self.status == 'move':
-            # while moving, ensure not flagged as attacking
+
+    def get_damage(self, player, attack_type):
+        if self.vulnerable:
+            if attack_type == 'weapon':
+                self.health -= player.get_full_weapon_damage()
+            else:
+                # Magic damage calculation based on player stats
+                magic_damage = player.stats['magic'] + magic_data[player.magic]['strength']
+                self.health -= magic_damage
+            
+            self.hit_time = pygame.time.get_ticks()
+            self.vulnerable = False
+            
+            # Apply Hit Stun
+            self.hit_stun = True
+            # Interrupt any current attack
             self.attacking = False
-        self.frame_index = 0
+
+    def check_death(self):
+        if self.health <= 0:
+            self.add_exp(self.exp) # Grant EXP before death
+            self.kill()
 
     def cooldowns(self):
+        current_time = pygame.time.get_ticks()
+        
         # handle resetting attack availability after cooldown
         if not self.can_attack and self.attack_time is not None:
-            current_time = pygame.time.get_ticks()
             if current_time - self.attack_time >= self.attack_cooldown:
                 self.can_attack = True
-                self.attacking = False
                 self.attack_time = None
+        
+        # handle invincibility cooldown
+        if not self.vulnerable:
+            if current_time - self.hit_time >= self.invincibility_duration:
+                self.vulnerable = True
 
-
+        # handle hit stun cooldown
+        if self.hit_stun:
+            if current_time - self.hit_time >= self.hit_stun_duration:
+                self.hit_stun = False
 
     def import_graphics(self, name):
         self.animations = {'idle': [], 'move': [], 'attack': []}
@@ -84,9 +123,14 @@ class Enemy(Entity):
         animation = self.animations[self.status]
         if not animation:
             return
+            
         self.frame_index += self.animation_speed
         if self.frame_index >= len(animation):
+            # If the attack animation finished, unlock the state
+            if self.status == 'attack':
+                self.attacking = False
             self.frame_index = 0
+            
         self.image = animation[int(self.frame_index)]
         self.rect = self.image.get_rect(midbottom=self.hitbox.midbottom)
     
@@ -94,7 +138,6 @@ class Enemy(Entity):
         enemy_vec = pygame.math.Vector2(self.rect.center)
         player_vec = pygame.math.Vector2(player.rect.center)
         distance = (player_vec - enemy_vec).magnitude()
-
 
         if distance > 0:
             direction = (player_vec - enemy_vec).normalize()
@@ -106,7 +149,15 @@ class Enemy(Entity):
     def get_status(self, player):
         distance = self.get_player_distance_direction(player)[0]
 
-        if distance <= self.attack_radius and not self.attacking:
+        # 1. If currently attacking, lock status to 'attack' until animation finishes
+        if self.attacking:
+            self.status = 'attack'
+            return
+
+        # 2. Only transition to 'attack' if close enough AND cooldown is ready
+        if distance <= self.attack_radius and self.can_attack:
+            if self.status != 'attack':
+                self.frame_index = 0
             self.status = 'attack'
         elif distance <= self.notice_radius:
             self.status = 'move'
@@ -116,10 +167,12 @@ class Enemy(Entity):
     def update(self):
         # default update called by sprite groups: animate and move according to direction
         self.animate()
-        if self.status == 'move':
-            self.move(self.speed)
-        # run cooldowns to reset attack availability
         self.cooldowns()
+        self.check_death()
+        
+        # Only move if not stunned
+        if self.status == 'move' and not self.hit_stun:
+            self.move(self.speed)
 
     def enemy_update(self, player):
         # high-level enemy logic called from camera group
